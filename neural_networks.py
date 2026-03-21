@@ -84,6 +84,8 @@ class NeuralNetwork(nn.Module):
     def forward(self, x, verbose=False):
         for i, layer in enumerate(self.layers[:-1]):
             x = layer(x)
+            x = torch.relu(x) 
+            x = self.dropout(x)
             if verbose and isinstance(layer, nn.Linear):
                 print(f"Output shape: {x.shape}")
         
