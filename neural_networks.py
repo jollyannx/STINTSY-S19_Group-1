@@ -3,6 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.init
 
+
+ACTIVATION_TYPES = (nn.ReLU, nn.Sigmoid, nn.Tanh)
+
 class DataLoader(object):
     def __init__(self, X, y, batch_size):
         self.X = X
@@ -50,7 +53,6 @@ class NeuralNetwork(nn.Module):
 
         # Output Layer
         layers.append(nn.Linear(self.list_hidden[-1], self.num_classes))
-        layers.append(nn.Softmax(dim=1))
         self.layers = nn.Sequential(*layers)
 
     def init_weights(self):
@@ -66,39 +68,31 @@ class NeuralNetwork(nn.Module):
         return nn.Sigmoid()
 
     def forward_manual(self, x, verbose=False):
-        for i in range(len(self.layers) - 1):
-            if isinstance(self.layers[i], nn.Linear):
-                x = torch.matmul(x, self.layers[i].weight.t()) + self.layers[i].bias
-                x = torch.relu(x) 
-                x = self.dropout(x) 
-                
+        for layer in self.layers:
+            if isinstance(layer, nn.Linear):
+                x = torch.matmul(x, layer.weight.t()) + layer.bias
+            else:
+                x = layer(x)
+                x = self.dropout(x)
                 if verbose:
                     print(f"Output shape: {x.shape}")
-            else:
-                x = self.layers[i](x)
-        
+
         logits = x
-        probabilities = self.layers[-1](logits)
+        probabilities = torch.softmax(logits, dim=1)
         return logits, probabilities
 
     def forward(self, x, verbose=False):
-        for i, layer in enumerate(self.layers[:-1]):
+        for layer in self.layers:
             x = layer(x)
-            x = torch.relu(x) 
-            x = self.dropout(x)
-            if verbose and isinstance(layer, nn.Linear):
-                print(f"Output shape: {x.shape}")
-        
+            if isinstance(layer, ACTIVATION_TYPES):
+                x = self.dropout(x)
+                if verbose:
+                    print(f"Output shape: {x.shape}")
+
         logits = x
-        probabilities = self.layers[-1](logits)
-            
+        probabilities = torch.softmax(logits, dim=1)
+
         return logits, probabilities
 
     def predict(self, probabilities):
         return torch.argmax(probabilities, dim=1)
-    
-    # Inside your NeuralNetwork __init__:
- # 20% dropout
-
-# Inside your forward pass:
- # Add after each hidden layer
